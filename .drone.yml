@@ -80,13 +80,15 @@ steps:
       DOCKER_REPO:
         from_secret: DOCKER_REPO
     commands:
-      - mkdir -p /root/.kube
-      - echo "$KUBE_CONFIG" > /root/.kube/config
+      - mkdir -p .kube
+      - echo "$KUBE_CONFIG" > .kube/config
       - IMAGE="${DOCKER_REGISTRY}/${DOCKER_REPO}:${DRONE_COMMIT_SHA}"
       - echo "Deploying image:- $IMAGE"
       - cp k8s/deployment.yaml /tmp/deployment.yaml
+      - cp k8s/redis.yaml /tmp/redis.yaml
       - sed "s|IMAGE_REPLACE_ME|$IMAGE|g" /tmp/deployment.yaml > /tmp/deploy.yaml
       - kubectl apply -f /tmp/deploy.yaml -n ${KUBE_NAMESPACE}
+      - kubectl apply -f /tmp/redis.yaml -n ${KUBE_NAMESPACE}
       - kubectl rollout status deployment/rustie-api -n ${KUBE_NAMESPACE}
     depends_on:
       - docker-build-tag
