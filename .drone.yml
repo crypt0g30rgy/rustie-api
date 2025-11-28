@@ -36,8 +36,7 @@ steps:
       - echo "Testing Kubernetes access..."
       - mkdir -p .kube
       - echo "$KUBE_CONFIG" > .kube/config
-      - kubectl get ns || true
-      - kubectl get pods -n ${KUBE_NAMESPACE} || true
+      - kubectl get pods -n test
 
   #######################################################
   # Step 1 – Build & Push Docker image to PRIVATE registry
@@ -87,9 +86,9 @@ steps:
       - cp k8s/deployment.yaml /tmp/deployment.yaml
       - cp k8s/redis.yaml /tmp/redis.yaml
       - sed "s|IMAGE_REPLACE_ME|$IMAGE|g" /tmp/deployment.yaml > /tmp/deploy.yaml
-      - kubectl apply -f /tmp/deploy.yaml -n ${KUBE_NAMESPACE}
-      - kubectl apply -f /tmp/redis.yaml -n ${KUBE_NAMESPACE}
-      - kubectl rollout status deployment/rustie-api -n ${KUBE_NAMESPACE}
+      - kubectl apply -f /tmp/deploy.yaml -n test
+      - kubectl apply -f /tmp/redis.yaml -n test
+      - kubectl rollout status deployment/rustie-api -n test
     depends_on:
       - docker-build-tag
     when:
