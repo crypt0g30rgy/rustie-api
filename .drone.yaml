@@ -3,7 +3,10 @@ type: kubernetes
 name: rustie-api-ci-cd
 
 steps:
-  # Step 0 – Validate Docker registry credentials
+  #######################################################
+  # Step 0 – Test Login to Private Registry to validate creds
+  #######################################################
+
   - name: docker-creds-validation
     image: docker:27-cli
     environment:
@@ -18,7 +21,10 @@ steps:
       - echo "$DOCKER_PASSWORD" | docker login "$DOCKER_REGISTRY" -u "$DOCKER_USER" --password-stdin
       - echo "Docker login successful!"
 
-  # Step 1 – Validate Kubernetes access (optional)
+  #######################################################
+  # Step 0 – Test Kubernetes to validate access
+  #######################################################
+
   - name: k8s-access-validation
     image: bitnami/kubectl:latest
     environment:
@@ -33,7 +39,10 @@ steps:
       - kubectl get ns || true
       - kubectl get pods -n ${KUBE_NAMESPACE} || true
 
-  # Step 2 – Build & Push Docker image
+  #######################################################
+  # Step 1 – Build & Push Docker image to PRIVATE registry
+  #######################################################
+
   - name: docker-build-tag
     image: plugins/docker
     settings:
@@ -55,7 +64,10 @@ steps:
       event: [ push, tag, promote ]
       branch: [ main, master, develop, staging ]
 
-  # Step 3 – Deploy to Kubernetes
+  #########################################################
+  # Step 2 — Deploy to Kubernetes
+  #########################################################
+
   - name: deploy-k8s
     image: bitnami/kubectl
     environment:
