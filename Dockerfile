@@ -31,4 +31,9 @@ COPY --from=builder /app/target/release/rustie-api /app/rustie-api
 
 EXPOSE 3000
 
+# Create User and Group
+RUN groupadd -r rustie && useradd -r -g rustie rustie
+
+USER rustie
+
 CMD ["/app/rustie-api"]

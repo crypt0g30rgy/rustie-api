@@ -83,7 +83,7 @@ steps:
       - mkdir -p /root/.kube
       - echo "$KUBE_CONFIG" > /root/.kube/config
       - IMAGE="${DOCKER_REGISTRY}/${DOCKER_REPO}:${DRONE_COMMIT_SHA}"
-      - echo "Deploying image: $IMAGE"
+      - echo "Deploying image:- $IMAGE"
       - cp k8s/deployment.yaml /tmp/deployment.yaml
       - sed "s|IMAGE_REPLACE_ME|$IMAGE|g" /tmp/deployment.yaml > /tmp/deploy.yaml
       - kubectl apply -f /tmp/deploy.yaml -n ${KUBE_NAMESPACE}
