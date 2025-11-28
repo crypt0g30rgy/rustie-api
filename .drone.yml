@@ -34,8 +34,8 @@ steps:
         from_secret: KUBE_NAMESPACE
     commands:
       - echo "Testing Kubernetes access..."
-      - mkdir -p /root/.kube
-      - echo "$KUBE_CONFIG" > /root/.kube/config
+      - mkdir -p .kube
+      - echo "$KUBE_CONFIG" > .kube/config
       - kubectl get ns || true
       - kubectl get pods -n ${KUBE_NAMESPACE} || true
 
