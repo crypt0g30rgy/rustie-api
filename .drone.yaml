@@ -1,0 +1,96 @@
+kind: pipeline
+type: kubernetes
+name: rustie-api-ci-cd
+
+steps:
+  # Step 0 – Validate Docker registry credentials
+  - name: docker-creds-validation
+    image: docker:27-cli
+    environment:
+      DOCKER_REGISTRY:
+        from_secret: DOCKER_REGISTRY
+      DOCKER_USER:
+        from_secret: DOCKER_USER
+      DOCKER_PASSWORD:
+        from_secret: DOCKER_PASSWORD
+    commands:
+      - echo "Testing Docker login to $DOCKER_REGISTRY"
+      - echo "$DOCKER_PASSWORD" | docker login "$DOCKER_REGISTRY" -u "$DOCKER_USER" --password-stdin
+      - echo "Docker login successful!"
+
+  # Step 1 – Validate Kubernetes access (optional)
+  - name: k8s-access-validation
+    image: bitnami/kubectl:latest
+    environment:
+      KUBE_CONFIG:
+        from_secret: KUBE_CONFIG
+      KUBE_NAMESPACE:
+        from_secret: KUBE_NAMESPACE
+    commands:
+      - echo "Testing Kubernetes access..."
+      - mkdir -p /root/.kube
+      - echo "$KUBE_CONFIG" > /root/.kube/config
+      - kubectl get ns || true
+      - kubectl get pods -n ${KUBE_NAMESPACE} || true
+
+  # Step 2 – Build & Push Docker image
+  - name: docker-build-tag
+    image: plugins/docker
+    settings:
+      dockerfile: Dockerfile
+      context: .
+      registry:
+        from_secret: DOCKER_REGISTRY
+      repo:
+        from_secret: DOCKER_REPO
+      username:
+        from_secret: DOCKER_USER
+      password:
+        from_secret: DOCKER_PASSWORD
+      tags:
+        - ${DRONE_COMMIT_SHA:0:8}
+        - ${DRONE_COMMIT_SHA}
+        - latest
+    when:
+      event: [ push, tag, promote ]
+      branch: [ main, master, develop, staging ]
+
+  # Step 3 – Deploy to Kubernetes
+  - name: deploy-k8s
+    image: bitnami/kubectl
+    environment:
+      KUBE_CONFIG:
+        from_secret: KUBE_CONFIG
+      KUBE_NAMESPACE:
+        from_secret: KUBE_NAMESPACE
+      DOCKER_REGISTRY:
+        from_secret: DOCKER_REGISTRY
+      DOCKER_REPO:
+        from_secret: DOCKER_REPO
+    commands:
+      - mkdir -p /root/.kube
+      - echo "$KUBE_CONFIG" > /root/.kube/config
+      - IMAGE="${DOCKER_REGISTRY}/${DOCKER_REPO}:${DRONE_COMMIT_SHA}"
+      - echo "Deploying image: $IMAGE"
+      - cp k8s/deployment.yaml /tmp/deployment.yaml
+      - sed "s|IMAGE_REPLACE_ME|$IMAGE|g" /tmp/deployment.yaml > /tmp/deploy.yaml
+      - kubectl apply -f /tmp/deploy.yaml -n ${KUBE_NAMESPACE}
+      - kubectl rollout status deployment/rustie-api -n ${KUBE_NAMESPACE}
+    depends_on:
+      - docker-build-tag
+    when:
+      status: [ success ]
+      event: [ push, tag, promote ]
+      branch: [ main, master ]
+
+trigger:
+  branch:
+    - main
+    - master
+    - develop
+    - staging
+  event:
+    - push
+    - pull_request
+    - tag
+    - promote

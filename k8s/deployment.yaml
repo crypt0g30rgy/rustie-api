@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustie-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rustie-api
+  template:
+    metadata:
+      labels:
+        app: rustie-api
+    spec:
+      containers:
+        - name: rustie-api
+          # The pipeline will replace IMAGE_REPLACE_ME with the built image
+          image: IMAGE_REPLACE_ME
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustie-api
+spec:
+  selector:
+    app: rustie-api
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
